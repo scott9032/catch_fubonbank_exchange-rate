@@ -13,7 +13,6 @@
             margin: 0;
             padding: 0;
         }
-        /* 載入中的視覺提示 */
         #root:empty {
             display: flex;
             align-items: center;
@@ -22,14 +21,13 @@
             background: #f8fafc;
         }
         #root:empty::after {
-            content: "系統初始化中...";
+            content: "系統啟動中...";
             color: #64748b;
             font-weight: 500;
-            font-size: 1.1rem;
         }
     </style>
     <script>
-        // 確保在模組載入前 process 已定義
+        // 初始化環境變數
         window.process = { env: { API_KEY: "" } };
     </script>
     <script type="importmap">
@@ -49,10 +47,8 @@
 <body>
     <div id="root"></div>
     
-    <!-- 1. 先定義 TSX 檔案路徑 -->
-    <script type="text/tsx" src="./index.tsx"></script>
-    
-    <!-- 2. 再載入 esm.sh/run 進行轉換與執行 -->
+    <!-- 確保在 DOM 載入後執行 -->
+    <script type="text/tsx" src="index.tsx"></script>
     <script type="module" src="https://esm.sh/run"></script>
 </body>
 </html>
