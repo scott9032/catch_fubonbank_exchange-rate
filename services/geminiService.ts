@@ -10,7 +10,6 @@ export const fetchLatestRates = async (): Promise<RateUpdate> => {
 
   const ai = new GoogleGenAI({ apiKey });
   
-  // 優化後的 Prompt，增加對富邦頁面結構的描述
   const prompt = `
     請使用 Google Search 功能，造訪台北富邦銀行的「最新匯率」頁面：
     URL: https://www.fubon.com/banking/personal/deposit/exchange_rate/exchange_rate_tw.htm?page=ex_rate_tab0
@@ -75,7 +74,13 @@ export const fetchLatestRates = async (): Promise<RateUpdate> => {
       sources: sources
     };
   } catch (error: any) {
-    console.error("Gemini Service Error:", error);
+    console.error("Gemini Service Error Detail:", error);
+    
+    // 專門處理 429 錯誤
+    if (error.message?.includes("429") || error.message?.includes("RESOURCE_EXHAUSTED")) {
+      throw new Error("API 配額已達上限（429）。請等待 1 分鐘後再試，或更換付費版 API Key。");
+    }
+    
     throw new Error(error.message || "擷取資料時發生錯誤，請稍後再試。");
   }
 };

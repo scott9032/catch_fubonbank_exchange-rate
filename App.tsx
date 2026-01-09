@@ -16,7 +16,7 @@ const App: React.FC = () => {
     try {
       const result = await fetchLatestRates();
       if (!result.rates || result.rates.length === 0) {
-        throw new Error("抓取成功但未發現有效的匯率數據，請檢查目標網頁是否變更。");
+        throw new Error("抓取成功但未發現有效的匯率數據。");
       }
       setData(result);
       setStatus(FetchStatus.SUCCESS);
@@ -47,6 +47,8 @@ const App: React.FC = () => {
     XLSX.utils.book_append_sheet(wb, ws, "富邦最新匯率");
     XLSX.writeFile(wb, `富邦匯率_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
+
+  const isQuotaError = error?.includes("429") || error?.includes("配額");
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center py-8 px-4">
@@ -83,13 +85,33 @@ const App: React.FC = () => {
         </header>
 
         {error ? (
-          <div className="bg-rose-50 border border-rose-200 p-8 rounded-2xl shadow-sm text-center">
-            <div className="inline-flex items-center justify-center w-12 h-12 bg-rose-100 text-rose-600 rounded-full mb-4">
-              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+          <div className={`border p-8 rounded-2xl shadow-sm text-center ${isQuotaError ? 'bg-amber-50 border-amber-200' : 'bg-rose-50 border-rose-200'}`}>
+            <div className={`inline-flex items-center justify-center w-12 h-12 rounded-full mb-4 ${isQuotaError ? 'bg-amber-100 text-amber-600' : 'bg-rose-100 text-rose-600'}`}>
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
             </div>
-            <h3 className="text-lg font-bold text-rose-900 mb-2">錯誤詳情</h3>
-            <p className="text-rose-700 mb-6 text-sm">{error}</p>
-            <button onClick={handleFetch} className="px-6 py-2 bg-rose-600 text-white rounded-lg hover:bg-rose-700 font-semibold transition-colors">嘗試重連</button>
+            <h3 className={`text-lg font-bold mb-2 ${isQuotaError ? 'text-amber-900' : 'text-rose-900'}`}>
+              {isQuotaError ? 'API 限制提示' : '錯誤詳情'}
+            </h3>
+            <p className={`mb-6 text-sm ${isQuotaError ? 'text-amber-700' : 'text-rose-700'}`}>{error}</p>
+            <div className="flex gap-4 justify-center">
+              <button 
+                onClick={handleFetch} 
+                className={`px-6 py-2 rounded-lg font-semibold transition-colors text-white ${isQuotaError ? 'bg-amber-600 hover:bg-amber-700' : 'bg-rose-600 hover:bg-rose-700'}`}
+              >
+                再次重試
+              </button>
+              {isQuotaError && (
+                <a 
+                  href="https://ai.google.dev/pricing" 
+                  target="_blank" 
+                  className="px-6 py-2 bg-white border border-amber-200 text-amber-700 rounded-lg hover:bg-amber-100 font-semibold"
+                >
+                  查看配額限制
+                </a>
+              )}
+            </div>
           </div>
         ) : (
           <main className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
@@ -97,7 +119,7 @@ const App: React.FC = () => {
               <div className="py-40 flex flex-col items-center justify-center text-center px-4">
                 <div className="w-12 h-12 border-4 border-slate-100 border-t-blue-600 rounded-full animate-spin mb-4"></div>
                 <p className="text-slate-500 font-medium">Gemini 正在擷取並解析富邦銀行即時匯率...</p>
-                <p className="text-xs text-slate-400 mt-2">（這通常需要 5-10 秒，請稍候）</p>
+                <p className="text-xs text-slate-400 mt-2">（若發生 429 錯誤，請等待 1 分鐘後再整理）</p>
               </div>
             ) : data && data.rates.length > 0 ? (
               <RateTable rates={data.rates} />
@@ -109,7 +131,7 @@ const App: React.FC = () => {
 
         {data?.sources && data.sources.length > 0 && (
           <div className="mt-4 p-4 bg-white rounded-xl border border-slate-200 text-xs text-slate-500">
-            <p className="font-bold mb-2">資料來源引注 (Google Search Grounding)：</p>
+            <p className="font-bold mb-2">資料來源引注 (Google Search)：</p>
             <ul className="list-disc pl-5 flex flex-col gap-1">
               {data.sources.map((source, i) => (
                 <li key={i}>
