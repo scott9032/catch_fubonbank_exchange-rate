@@ -2,17 +2,17 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App.tsx';
 
-console.log("React 應用程式正在啟動...");
+console.log("DOM 載入完成，開始初始化 React...");
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
-  console.error("找不到 root 節點");
-  throw new Error("Could not find root element to mount to");
+  console.error("找不到渲染節點 #root");
+} else {
+  const root = ReactDOM.createRoot(rootElement);
+  root.render(
+    <React.StrictMode>
+      <App />
+    </React.StrictMode>
+  );
+  console.log("React 渲染指令已發送");
 }
-
-const root = ReactDOM.createRoot(rootElement);
-root.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
-);

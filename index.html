@@ -13,8 +13,10 @@
             margin: 0;
             padding: 0;
         }
+        /* 初始載入樣式 */
         #root:empty {
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
             height: 100vh;
@@ -24,11 +26,20 @@
             content: "系統啟動中...";
             color: #64748b;
             font-weight: 500;
+            margin-bottom: 1rem;
         }
     </style>
     <script>
-        // 初始化環境變數
+        // 初始化環境變數，防止模組報錯
         window.process = { env: { API_KEY: "" } };
+        
+        // 診斷：如果 8 秒後還是空白，顯示提示
+        setTimeout(() => {
+            const root = document.getElementById('root');
+            if (root && root.innerHTML === "") {
+                root.innerHTML = '<div style="text-align:center; color:#64748b;">載入時間較長，請嘗試 <a href="javascript:location.reload()" style="color:#2563eb;text-decoration:underline;">重新整理頁面</a></div>';
+            }
+        }, 8000);
     </script>
     <script type="importmap">
 {
@@ -47,8 +58,8 @@
 <body>
     <div id="root"></div>
     
-    <!-- 確保在 DOM 載入後執行 -->
-    <script type="text/tsx" src="index.tsx"></script>
+    <!-- 使用相對路徑 ./ 確保在 GitHub Pages 子目錄執行正確 -->
+    <script type="text/tsx" src="./index.tsx"></script>
     <script type="module" src="https://esm.sh/run"></script>
 </body>
 </html>
