@@ -14,7 +14,7 @@
         }
     </style>
     <script>
-        // 防止 process.env 報錯的補丁
+        // 環境變數補丁
         window.process = window.process || { env: { API_KEY: "" } };
     </script>
     <script type="importmap">
@@ -29,7 +29,8 @@
       }
     }
     </script>
-    <!-- 使用 esm.sh/run 自動編譯並執行 index.tsx -->
+    <!-- 明確指出入口檔案，這是解決空白頁的關鍵 -->
+    <script type="text/tsx" src="./index.tsx"></script>
     <script type="module" src="https://esm.sh/run"></script>
 </head>
 <body>
