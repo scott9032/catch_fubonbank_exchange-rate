@@ -1,0 +1,5 @@
+{
+  "name": "富邦銀行匯率擷取器",
+  "description": "自動抓取富邦銀行即時匯率資訊，提供視覺化表格展示並支援一鍵匯出 Excel 報表。",
+  "requestFramePermissions": []
+}
