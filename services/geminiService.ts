@@ -1,27 +1,32 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
-import { ExchangeRate, RateUpdate } from "../types.ts";
+import { RateUpdate } from "../types.ts";
 
-const API_KEY = process.env.API_KEY || "";
-
+/**
+ * fetchLatestRates uses the Gemini 3 Flash model with Google Search grounding
+ * to scrape the latest exchange rates from Fubon Bank.
+ */
 export const fetchLatestRates = async (): Promise<RateUpdate> => {
-  const ai = new GoogleGenAI({ apiKey: API_KEY });
+  // Always initialize GoogleGenAI directly with process.env.API_KEY as per guidelines.
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
-  // 針對富邦銀行的網頁結構（分頁設計）優化提示詞
   const prompt = `
-    請精準抓取富邦銀行「台北富邦銀行-匯率查詢」頁面的數據：
+    請前往富邦銀行匯率頁面並抓取最新資料：
     網址：https://www.fubon.com/banking/personal/deposit/exchange_rate/exchange_rate_tw.htm?page=ex_rate_tab0
     
-    【抓取指令】
-    1. 網頁上有「即期」、「現鈔」等不同按鈕或分頁。
-    2. 請確保獲取每一種幣別（如：美金 USD, 日圓 JPY, 歐元 EUR...）的下列四項數值：
-       - 即期買入 (Spot Buy)
-       - 即期賣出 (Spot Sell)
-       - 現鈔買入 (Cash Buy)
-       - 現鈔賣出 (Cash Sell)
-    3. 如果網頁當前視圖只顯示「即期」，請也設法獲取「現鈔」的資料（通常在同一表格的其他欄位或切換分頁後出現）。
-    4. 請檢查表格中的所有欄位，不要遺漏「即期買入」與「即期賣出」。
-    5. 若某項數值確實不存在，請填入 "-"。
+    【精確擷取指令】
+    請仔細核對表格的每一列與每一欄，確保擷取到以下所有數據：
+    1. 幣別 (例如: 美金, 日圓)
+    2. 幣別代碼 (例如: USD, JPY)
+    3. 即期買入 (Spot Buy)
+    4. 即期賣出 (Spot Sell)
+    5. 現鈔買入 (Cash Buy)
+    6. 現鈔賣出 (Cash Sell)
+    
+    注意：在富邦銀行的網頁上，「即期」和「現鈔」是分開的指標，請務必將「即期」數值填入對應的 spotBuy/spotSell。
+    如果數值是橫線或空白，請填入 "-"。
+    
+    請回傳包含 timestamp (公告時間) 和 rates 陣列的 JSON。
   `;
 
   try {
@@ -34,7 +39,7 @@ export const fetchLatestRates = async (): Promise<RateUpdate> => {
         responseSchema: {
           type: Type.OBJECT,
           properties: {
-            timestamp: { type: Type.STRING, description: "公告更新時間" },
+            timestamp: { type: Type.STRING },
             rates: {
               type: Type.ARRAY,
               items: {
@@ -55,14 +60,26 @@ export const fetchLatestRates = async (): Promise<RateUpdate> => {
       }
     });
 
+    // Access the text property directly on the response object.
     const result = JSON.parse(response.text || "{}");
+    
+    // Extract grounding sources as required by Google Search grounding guidelines.
+    const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
+    const sources = groundingChunks?.map((chunk: any) => {
+      if (chunk.web) {
+        return { title: chunk.web.title, uri: chunk.web.uri };
+      }
+      return null;
+    }).filter((s: any) => s !== null) || [];
+
     return {
       timestamp: result.timestamp || new Date().toLocaleString(),
       rates: result.rates || [],
-      sourceUrl: "https://www.fubon.com/banking/personal/deposit/exchange_rate/exchange_rate_tw.htm"
+      sourceUrl: "https://www.fubon.com/banking/personal/deposit/exchange_rate/exchange_rate_tw.htm",
+      sources: sources
     };
   } catch (error) {
     console.error("Fetch Error:", error);
-    throw new Error("無法從富邦銀行擷取完整數據。請確認 API Key 有效且具備搜尋功能。");
+    throw new Error("擷取資料時發生錯誤。請確保網路連線正常。");
   }
 };
