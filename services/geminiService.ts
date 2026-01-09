@@ -1,32 +1,27 @@
-
 import { GoogleGenAI, Type } from "@google/genai";
 import { RateUpdate } from "../types.ts";
 
-/**
- * fetchLatestRates uses the Gemini 3 Flash model with Google Search grounding
- * to scrape the latest exchange rates from Fubon Bank.
- */
 export const fetchLatestRates = async (): Promise<RateUpdate> => {
-  // Always initialize GoogleGenAI directly with process.env.API_KEY as per guidelines.
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const apiKey = process.env.API_KEY;
   
+  if (!apiKey) {
+    throw new Error("找不到 API Key。請確保環境變數已設定。");
+  }
+
+  const ai = new GoogleGenAI({ apiKey });
+  
+  // 優化後的 Prompt，增加對富邦頁面結構的描述
   const prompt = `
-    請前往富邦銀行匯率頁面並抓取最新資料：
-    網址：https://www.fubon.com/banking/personal/deposit/exchange_rate/exchange_rate_tw.htm?page=ex_rate_tab0
+    請使用 Google Search 功能，造訪台北富邦銀行的「最新匯率」頁面：
+    URL: https://www.fubon.com/banking/personal/deposit/exchange_rate/exchange_rate_tw.htm?page=ex_rate_tab0
     
-    【精確擷取指令】
-    請仔細核對表格的每一列與每一欄，確保擷取到以下所有數據：
-    1. 幣別 (例如: 美金, 日圓)
-    2. 幣別代碼 (例如: USD, JPY)
-    3. 即期買入 (Spot Buy)
-    4. 即期賣出 (Spot Sell)
-    5. 現鈔買入 (Cash Buy)
-    6. 現鈔賣出 (Cash Sell)
+    你的任務是精確擷取頁面中的匯率表格數據。請注意：
+    1. 尋找「牌告匯率」表格。
+    2. 表格中應包含：幣別代碼 (例如 USD, JPY)、幣別名稱、即期買入、即期賣出、現鈔買入、現鈔賣出。
+    3. 如果數值顯示為 "-" 或空白，請在 JSON 中保留為 "-"。
+    4. 必須同時回傳網頁上標註的「公告日期時間」。
     
-    注意：在富邦銀行的網頁上，「即期」和「現鈔」是分開的指標，請務必將「即期」數值填入對應的 spotBuy/spotSell。
-    如果數值是橫線或空白，請填入 "-"。
-    
-    請回傳包含 timestamp (公告時間) 和 rates 陣列的 JSON。
+    請務必以純 JSON 格式回傳，不得包含 Markdown 代碼塊標籤。
   `;
 
   try {
@@ -39,7 +34,7 @@ export const fetchLatestRates = async (): Promise<RateUpdate> => {
         responseSchema: {
           type: Type.OBJECT,
           properties: {
-            timestamp: { type: Type.STRING },
+            timestamp: { type: Type.STRING, description: "公告時間" },
             rates: {
               type: Type.ARRAY,
               items: {
@@ -60,10 +55,11 @@ export const fetchLatestRates = async (): Promise<RateUpdate> => {
       }
     });
 
-    // Access the text property directly on the response object.
-    const result = JSON.parse(response.text || "{}");
+    const text = response.text;
+    if (!text) throw new Error("模型未回傳有效的內容。");
+
+    const result = JSON.parse(text);
     
-    // Extract grounding sources as required by Google Search grounding guidelines.
     const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
     const sources = groundingChunks?.map((chunk: any) => {
       if (chunk.web) {
@@ -78,8 +74,8 @@ export const fetchLatestRates = async (): Promise<RateUpdate> => {
       sourceUrl: "https://www.fubon.com/banking/personal/deposit/exchange_rate/exchange_rate_tw.htm",
       sources: sources
     };
-  } catch (error) {
-    console.error("Fetch Error:", error);
-    throw new Error("擷取資料時發生錯誤。請確保網路連線正常。");
+  } catch (error: any) {
+    console.error("Gemini Service Error:", error);
+    throw new Error(error.message || "擷取資料時發生錯誤，請稍後再試。");
   }
 };

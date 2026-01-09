@@ -30,16 +30,6 @@
     </style>
     <script>
         window.process = { env: { API_KEY: "" } };
-        // 全域錯誤監聽，幫助調試
-        window.onerror = function(msg, url, line) {
-            const root = document.getElementById('root');
-            if (root && root.innerHTML === "") {
-                root.innerHTML = `<div style="padding:20px; color:#ef4444; text-align:center;">
-                    <p>啟動失敗: ${msg}</p>
-                    <button onclick="location.reload(true)" style="margin-top:10px; background:#2563eb; color:white; border:none; padding:8px 16px; border-radius:6px;">重試</button>
-                </div>`;
-            }
-        };
     </script>
     <script type="importmap">
 {

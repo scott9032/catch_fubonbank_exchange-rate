@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import * as XLSX from 'xlsx';
 import { fetchLatestRates } from './services/geminiService.ts';
@@ -11,16 +10,19 @@ const App: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [lastUpdateAttempt, setLastUpdateAttempt] = useState<Date | null>(null);
 
-  // handleFetch triggers the API call to Gemini.
   const handleFetch = useCallback(async () => {
     setStatus(FetchStatus.LOADING);
     setError(null);
     try {
       const result = await fetchLatestRates();
+      if (!result.rates || result.rates.length === 0) {
+        throw new Error("抓取成功但未發現有效的匯率數據，請檢查目標網頁是否變更。");
+      }
       setData(result);
       setStatus(FetchStatus.SUCCESS);
       setLastUpdateAttempt(new Date());
     } catch (err: any) {
+      console.error("App handleFetch Error:", err);
       setError(err.message || "資料抓取失敗");
       setStatus(FetchStatus.ERROR);
     }
@@ -28,8 +30,6 @@ const App: React.FC = () => {
 
   useEffect(() => {
     handleFetch();
-    const interval = setInterval(handleFetch, 600000); // 10分鐘自動更新一次
-    return () => clearInterval(interval);
   }, [handleFetch]);
 
   const exportToExcel = () => {
@@ -64,7 +64,7 @@ const App: React.FC = () => {
             <button 
               onClick={handleFetch} 
               disabled={status === FetchStatus.LOADING}
-              className="flex-1 md:flex-none px-6 py-3 bg-blue-50 text-blue-700 border border-blue-200 rounded-xl hover:bg-blue-100 active:bg-blue-200 transition-all flex items-center justify-center gap-2 font-bold shadow-sm disabled:opacity-50"
+              className="flex-1 md:flex-none px-6 py-3 bg-blue-50 text-blue-700 border border-blue-200 rounded-xl hover:bg-blue-100 transition-all flex items-center justify-center gap-2 font-bold disabled:opacity-50"
             >
               <svg className={`w-5 h-5 ${status === FetchStatus.LOADING ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -75,11 +75,8 @@ const App: React.FC = () => {
             <button 
               onClick={exportToExcel} 
               disabled={!data || data.rates.length === 0}
-              className="flex-1 md:flex-none px-6 py-3 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 active:bg-emerald-800 transition-all flex items-center justify-center gap-2 font-bold shadow-md shadow-emerald-100 disabled:bg-slate-300 disabled:shadow-none"
+              className="flex-1 md:flex-none px-6 py-3 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 font-bold shadow-md disabled:bg-slate-300"
             >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
               匯出 Excel
             </button>
           </div>
@@ -90,29 +87,29 @@ const App: React.FC = () => {
             <div className="inline-flex items-center justify-center w-12 h-12 bg-rose-100 text-rose-600 rounded-full mb-4">
               <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
             </div>
-            <h3 className="text-lg font-bold text-rose-900 mb-2">資料擷取失敗</h3>
-            <p className="text-rose-700 mb-6">{error}</p>
-            <button onClick={handleFetch} className="px-6 py-2 bg-rose-600 text-white rounded-lg hover:bg-rose-700 font-semibold transition-colors">再試一次</button>
+            <h3 className="text-lg font-bold text-rose-900 mb-2">錯誤詳情</h3>
+            <p className="text-rose-700 mb-6 text-sm">{error}</p>
+            <button onClick={handleFetch} className="px-6 py-2 bg-rose-600 text-white rounded-lg hover:bg-rose-700 font-semibold transition-colors">嘗試重連</button>
           </div>
         ) : (
           <main className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
             {status === FetchStatus.LOADING && !data ? (
-              <div className="py-40 flex flex-col items-center justify-center">
+              <div className="py-40 flex flex-col items-center justify-center text-center px-4">
                 <div className="w-12 h-12 border-4 border-slate-100 border-t-blue-600 rounded-full animate-spin mb-4"></div>
-                <p className="text-slate-500 font-medium">正在為您連線至富邦銀行官網...</p>
+                <p className="text-slate-500 font-medium">Gemini 正在擷取並解析富邦銀行即時匯率...</p>
+                <p className="text-xs text-slate-400 mt-2">（這通常需要 5-10 秒，請稍候）</p>
               </div>
             ) : data && data.rates.length > 0 ? (
               <RateTable rates={data.rates} />
             ) : (
-              <div className="py-40 text-center text-slate-400">尚無資料，請點擊上方按鈕開始抓取。</div>
+              <div className="py-40 text-center text-slate-400">尚無資料，請點擊重新整理。</div>
             )}
           </main>
         )}
 
-        {/* Display grounding sources extracted from Google Search grounding */}
         {data?.sources && data.sources.length > 0 && (
           <div className="mt-4 p-4 bg-white rounded-xl border border-slate-200 text-xs text-slate-500">
-            <p className="font-bold mb-2">資料來源引注：</p>
+            <p className="font-bold mb-2">資料來源引注 (Google Search Grounding)：</p>
             <ul className="list-disc pl-5 flex flex-col gap-1">
               {data.sources.map((source, i) => (
                 <li key={i}>
@@ -125,11 +122,10 @@ const App: React.FC = () => {
           </div>
         )}
 
-        {/* Fixed footer tag mismatch - replaced </div> with </footer> */}
         <footer className="mt-6 flex flex-col md:flex-row justify-between items-center text-slate-400 text-xs gap-2 px-4">
           <p>© 台北富邦銀行 匯率自動監控工具</p>
           <div className="flex gap-4">
-            {lastUpdateAttempt && <span>系統最後連線：{lastUpdateAttempt.toLocaleTimeString()}</span>}
+            {lastUpdateAttempt && <span>本地最後連線：{lastUpdateAttempt.toLocaleTimeString()}</span>}
             {data?.timestamp && <span>銀行公告時間：{data.timestamp}</span>}
           </div>
         </footer>
