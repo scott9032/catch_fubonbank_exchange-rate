@@ -2,15 +2,11 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App.tsx';
 
-console.log("React 腳本啟動，檢查渲染環境...");
+console.log("React 啟動序列開始...");
 
-const init = () => {
-  const rootElement = document.getElementById('root');
-  if (!rootElement) {
-    console.error("錯誤：找不到渲染目標 #root");
-    return;
-  }
+const rootElement = document.getElementById('root');
 
+if (rootElement) {
   try {
     const root = ReactDOM.createRoot(rootElement);
     root.render(
@@ -18,15 +14,11 @@ const init = () => {
         <App />
       </React.StrictMode>
     );
-    console.log("React 渲染完成");
-  } catch (error) {
-    console.error("React 渲染失敗:", error);
+    console.log("React 渲染指令已送出");
+  } catch (err) {
+    console.error("渲染過程出錯:", err);
+    rootElement.innerHTML = `<div style="text-align:center;color:red;padding:20px;">渲染出錯，請檢查 Console。</div>`;
   }
-};
-
-// 確保 DOM 載入後再執行渲染
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', init);
 } else {
-  init();
+  console.error("找不到 #root 節點");
 }

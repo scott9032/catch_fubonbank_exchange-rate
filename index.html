@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>富邦銀行匯率監控</title>
-    <!-- 消除 favicon 404 錯誤 -->
     <link rel="icon" href="data:,">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
@@ -15,7 +14,6 @@
             margin: 0;
             padding: 0;
         }
-        /* 初始載入樣式 */
         #root:empty {
             display: flex;
             flex-direction: column;
@@ -28,27 +26,20 @@
             content: "系統啟動中...";
             color: #64748b;
             font-weight: 500;
-            margin-bottom: 1rem;
         }
     </style>
     <script>
-        // 初始化環境變數
         window.process = { env: { API_KEY: "" } };
-        
-        // 診斷：如果 10 秒後還是空白，顯示提示並提供強制重整按鈕
-        setTimeout(() => {
+        // 全域錯誤監聽，幫助調試
+        window.onerror = function(msg, url, line) {
             const root = document.getElementById('root');
             if (root && root.innerHTML === "") {
-                root.innerHTML = `
-                    <div style="text-align:center; padding: 20px;">
-                        <p style="color:#64748b; margin-bottom: 10px;">載入時間較長，這可能是因為 GitHub Pages 的快取或網路波動。</p>
-                        <button onclick="location.reload(true)" style="background:#2563eb; color:white; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; font-weight:bold;">
-                            強制重新整理 (Clear Cache)
-                        </button>
-                    </div>
-                `;
+                root.innerHTML = `<div style="padding:20px; color:#ef4444; text-align:center;">
+                    <p>啟動失敗: ${msg}</p>
+                    <button onclick="location.reload(true)" style="margin-top:10px; background:#2563eb; color:white; border:none; padding:8px 16px; border-radius:6px;">重試</button>
+                </div>`;
             }
-        }, 10000);
+        };
     </script>
     <script type="importmap">
 {
@@ -66,8 +57,6 @@
 </head>
 <body>
     <div id="root"></div>
-    
-    <!-- 引入 esm.sh/run 並直接 import 入口檔案，這在 GitHub Pages 子路徑下更穩定 -->
     <script type="module" src="https://esm.sh/run"></script>
     <script type="text/tsx">
         import './index.tsx';
